@@ -9,25 +9,28 @@ interface Target {
 
 const TARGETS: Record<string, Target> = {
   dashboard: { path: () => '/dashboard', needsId: false },
-  mentions: { path: () => '/mentions', needsId: false },
-  mention: { path: (id) => `/mentions/${id}`, needsId: true },
-  site: { path: (id) => `/websites/${id}`, needsId: true },
-  sites: { path: () => '/websites', needsId: false },
   keywords: { path: () => '/keywords', needsId: false },
+  leads: { path: () => '/leads', needsId: false },
+  alerts: { path: () => '/alerts', needsId: false },
+  subreddits: { path: () => '/subreddits', needsId: false },
+  seo: { path: () => '/seo', needsId: false },
   tokens: { path: () => '/api-tokens', needsId: false },
   billing: { path: () => '/billing', needsId: false },
+  settings: { path: () => '/settings/general', needsId: false },
+  workspaces: { path: () => '/workspaces', needsId: false },
 };
 
 const ALIASES: Record<string, string> = {
   home: 'dashboard',
-  leads: 'mentions',
-  website: 'site',
-  websites: 'sites',
   keyword: 'keywords',
+  lead: 'leads',
+  mention: 'leads',
+  mentions: 'leads',
+  alert: 'alerts',
+  subreddit: 'subreddits',
   token: 'tokens',
   'api-tokens': 'tokens',
-  plan: 'billing',
-  upgrade: 'billing',
+  workspace: 'workspaces',
 };
 
 export function registerOpenCommand(program: Command): void {
