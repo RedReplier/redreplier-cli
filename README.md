@@ -16,13 +16,17 @@ npm install -g @redreplier/cli
 npx -p @redreplier/cli redreplier --help
 
 # macOS and Linux, standalone binary, no Node required
-brew install RedReplier/tap/redreplier
+brew trust RedReplier/tap && brew install RedReplier/tap/redreplier
 
 # or
 curl -fsSL https://redreplier.com/install.sh | sh
 ```
 
 `npx @redreplier/cli` prompts instead of running, because npx resolves a bin named after the unscoped package. Use `npx -p @redreplier/cli redreplier`. There is no unscoped `redreplier` package, so plain `npx redreplier` will not find anything.
+
+Homebrew 7 refuses to load a formula from a third-party tap until you trust it, which is
+what `brew trust` does. Skip it and both `brew install` and `brew upgrade` stop with
+"Refusing to load formula ... from untrusted tap".
 
 The install script downloads the release archive for your platform, verifies its checksum, and puts the binary in `~/.local/bin`. It never edits your shell rc files; it prints the `export PATH` line for you to add. Override the destination with `REDREPLIER_INSTALL_DIR`.
 
