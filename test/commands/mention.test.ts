@@ -309,7 +309,7 @@ describe('mention list', () => {
   });
 
   it('surfaces both hidden-row rules in human mode', async () => {
-    initOutput({ isTTY: true, command: 'mention.list' });
+    initOutput({ isTTY: true, env: {}, command: 'mention.list' });
     vi.mocked(client.listMentions).mockResolvedValue(page([mention()], 213));
     vi.mocked(client.countMentions).mockResolvedValue({ total: 254 });
 
@@ -322,7 +322,7 @@ describe('mention list', () => {
   });
 
   it('stays quiet about hidden rows once the filters ask for them', async () => {
-    initOutput({ isTTY: true, command: 'mention.list' });
+    initOutput({ isTTY: true, env: {}, command: 'mention.list' });
     vi.mocked(client.listMentions).mockResolvedValue(page([mention()], 1));
 
     await run(['mention', 'list', '--status', 'REJECTED', '--include-low']);
@@ -334,7 +334,7 @@ describe('mention list', () => {
 
 describe('mention count', () => {
   it('sends the filters and prints one sentence in human mode', async () => {
-    initOutput({ isTTY: true, command: 'mention.count' });
+    initOutput({ isTTY: true, env: {}, command: 'mention.count' });
     vi.mocked(client.countMentions).mockResolvedValue({ total: 213 });
 
     await run(['mention', 'count', '--source', 'BLUESKY']);
@@ -376,7 +376,7 @@ describe('mention show', () => {
   });
 
   it('prints the score reason and the suggested reply in human mode', async () => {
-    initOutput({ isTTY: true, command: 'mention.show' });
+    initOutput({ isTTY: true, env: {}, command: 'mention.show' });
     vi.mocked(client.listMentions).mockResolvedValue(page([mention()], 1));
 
     await run(['mention', 'show', '8f2c1b0e']);
@@ -397,7 +397,7 @@ describe('mention explain', () => {
   });
 
   it('warns that the first call generates before it prints', async () => {
-    initOutput({ isTTY: true, command: 'mention.explain' });
+    initOutput({ isTTY: true, env: {}, command: 'mention.explain' });
     vi.mocked(client.explainMention).mockResolvedValue(mention());
 
     await run(['mention', 'explain', mention().id]);

@@ -167,7 +167,7 @@ describe('keyword add', () => {
   });
 
   it('names the pending keyword and the upgrade command in human mode', async () => {
-    initOutput({ isTTY: true, command: 'keyword.add' });
+    initOutput({ isTTY: true, env: {}, command: 'keyword.add' });
     vi.mocked(client.addKeywords).mockResolvedValue(
       site([keyword('kw_1', 'social listening'), keyword('kw_2', 'reddit leads', 'PENDING')]),
     );
@@ -182,7 +182,7 @@ describe('keyword add', () => {
 
 describe('keyword edit', () => {
   it('sends nothing when the change is case-only', async () => {
-    initOutput({ isTTY: true, command: 'keyword.edit' });
+    initOutput({ isTTY: true, env: {}, command: 'keyword.edit' });
     vi.mocked(client.listWebsites).mockResolvedValue({
       websites: [site([keyword('kw_1', 'reddit monitoring')])],
     });
@@ -216,7 +216,7 @@ describe('keyword edit', () => {
 
 describe('keyword enable', () => {
   it('says plainly that a pending keyword is not collecting', async () => {
-    initOutput({ isTTY: true, command: 'keyword.enable' });
+    initOutput({ isTTY: true, env: {}, command: 'keyword.enable' });
     vi.mocked(client.enableKeyword).mockResolvedValue(keyword('kw_1', 'reddit leads', 'PENDING'));
 
     await run(['keyword', 'enable', 'kw_1']);
@@ -286,7 +286,7 @@ describe('keyword plan', () => {
   });
 
   it('prices an absolute keyword total with --count', async () => {
-    initOutput({ isTTY: true, command: 'keyword.plan' });
+    initOutput({ isTTY: true, env: {}, command: 'keyword.plan' });
     vi.mocked(client.previewKeywordBilling).mockResolvedValue(preview);
 
     await run(['keyword', 'plan', '--count', '25']);
@@ -308,7 +308,7 @@ describe('keyword plan', () => {
 
 describe('keyword usage', () => {
   it('says unlimited rather than pretending to be a meter', async () => {
-    initOutput({ isTTY: true, command: 'keyword.usage' });
+    initOutput({ isTTY: true, env: {}, command: 'keyword.usage' });
     vi.mocked(client.getKeywordChangeUsage).mockResolvedValue({
       limit: -1,
       used: 3,
@@ -322,7 +322,7 @@ describe('keyword usage', () => {
   });
 
   it('prints the meter when the plan has one', async () => {
-    initOutput({ isTTY: true, command: 'keyword.usage' });
+    initOutput({ isTTY: true, env: {}, command: 'keyword.usage' });
     vi.mocked(client.getKeywordChangeUsage).mockResolvedValue({
       limit: 10,
       used: 4,
@@ -339,7 +339,7 @@ describe('keyword usage', () => {
 
 describe('keyword activate-pending', () => {
   it('reports what is still pending and that nothing was charged', async () => {
-    initOutput({ isTTY: true, command: 'keyword.activate-pending' });
+    initOutput({ isTTY: true, env: {}, command: 'keyword.activate-pending' });
     vi.mocked(client.activatePendingKeywords).mockResolvedValue({
       websites: [site([keyword('kw_1', 'a'), keyword('kw_2', 'b', 'PENDING')])],
     });
