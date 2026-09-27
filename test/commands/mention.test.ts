@@ -176,6 +176,12 @@ describe('buildFilterQuery', () => {
     expect(buildFilterQuery({ status: [], bucket: [], keyword: [], source: [] })).toEqual({});
   });
 
+  it('sends --min-score as a whole-number minScore', () => {
+    expect(buildFilterQuery({ minScore: '70' })).toEqual({ minScore: 70 });
+    expect(buildFilterQuery({ minScore: '0' })).toEqual({ minScore: 0 });
+    expect(() => buildFilterQuery({ minScore: '70.5' })).toThrowError(/between 0 and 100/);
+  });
+
   it('turns dates into ISO strings', () => {
     expect(buildFilterQuery({ from: '2026-08-01' }).from).toBe('2026-08-01T00:00:00.000Z');
   });
@@ -255,6 +261,7 @@ describe('the mention command tree', () => {
           '--status',
           '--bucket',
           '--include-low',
+          '--min-score',
           '--keyword',
           '--source',
         ]),
@@ -290,6 +297,16 @@ describe('mention list', () => {
       offset: 0,
     });
     expect(payload().meta).toMatchObject({ total: 213, limit: 5, offset: 0, hasMore: true });
+  });
+
+  it('runs list when mentions gets filters and no verb', async () => {
+    vi.mocked(client.listMentions).mockResolvedValue(page([mention()]));
+
+    await run(['mentions', '--min-score', '70', '--status', 'NEW', '--json']);
+
+    expect(client.listMentions).toHaveBeenCalledWith(
+      expect.objectContaining({ minScore: 70, statuses: ['NEW'] }),
+    );
   });
 
   it('applies the profile default site', async () => {

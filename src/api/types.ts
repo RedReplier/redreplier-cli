@@ -168,6 +168,7 @@ export type MentionFilterQuery = {
   statuses?: MentionStatus[];
   scoreBuckets?: RelevanceBucket[];
   includeLowRelevance?: boolean;
+  minScore?: number;
   keywords?: string[];
   sources?: MentionSource[];
   from?: string;

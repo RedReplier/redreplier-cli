@@ -214,12 +214,12 @@ Reading the site list promotes `PENDING` keywords that fit free headroom, which 
 
 | Command | Key flags | Notes |
 |---|---|---|
-| `mention list` | `--site`, `--status`, `--bucket`, `--include-low`, `--keyword`, `--source`, `--sort`, `--from`, `--to`, `--limit`, `--offset`, `--all` | Repeat `--status`, `--bucket`, `--keyword` and `--source` for several values |
+| `mention list` | `--site`, `--status`, `--bucket`, `--include-low`, `--min-score`, `--keyword`, `--source`, `--sort`, `--from`, `--to`, `--limit`, `--offset`, `--all` | Repeat `--status`, `--bucket`, `--keyword` and `--source` for several values |
 | `mention count` | The same filters | `{"total": N}` in machine mode, the API payload unchanged |
 | `mention show <id>` | `--explain`, plus the filters | Pages the list to find the id, or fetches it through `explain` |
 | `mention status <id> <status>` | | `NEW`, `APPROVED` or `REJECTED`, case-insensitive. Reversible, so no confirmation |
 | `mention explain <id>` | | The first call generates and is slow, later calls are instant reads |
-| `mention tail` | `--min-score`, `--interval`, `--since`, `--exec`, `--approve-on-exec-success`, plus the filters | `--interval` has a floor of 30 s |
+| `mention tail` | `--interval`, `--since`, `--exec`, `--approve-on-exec-success`, plus the filters | `--interval` has a floor of 30 s |
 
 Enums, in full:
 
@@ -232,7 +232,9 @@ Enums, in full:
 
 Two rows are hidden by default and both are surfaced in the footer when they could be biting: `REJECTED` mentions need `--status REJECTED`, and mentions below the site's minimum score need `--include-low`. `--limit` runs from 1 to 500 and is validated before the request. `--from` and `--to` filter ingestion time, not the time the thread was posted.
 
-`mention` also answers to `mentions`.
+`--min-score <n>` keeps mentions scoring at least `n` (0 to 100) and drops unscored ones. The server applies it, so `--limit` and `total` count only the matches. It works on top of the site's minimum score. To go below that minimum, add `--include-low`.
+
+`mention` also answers to `mentions`, and a bare `redreplier mentions` with filters runs `mention list`.
 
 ### alerts
 

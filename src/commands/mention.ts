@@ -126,6 +126,7 @@ export interface FilterOptions {
   status?: MentionStatus[];
   bucket?: RelevanceBucket[];
   includeLow?: boolean;
+  minScore?: string;
   keyword?: string[];
   source?: MentionSource[];
   from?: string;
@@ -138,6 +139,8 @@ export function buildFilterQuery(options: FilterOptions): MentionFilterQuery {
   if (options.status && options.status.length > 0) query.statuses = options.status;
   if (options.bucket && options.bucket.length > 0) query.scoreBuckets = options.bucket;
   if (options.includeLow === true) query.includeLowRelevance = true;
+  const minScore = parseMinScore(options.minScore);
+  if (minScore !== undefined) query.minScore = minScore;
   if (options.keyword && options.keyword.length > 0) query.keywords = options.keyword;
   if (options.source && options.source.length > 0) query.sources = options.source;
   if (options.from !== undefined) query.from = toIso(parseWhen(options.from));
@@ -456,7 +459,6 @@ async function runExplain(id: string): Promise<void> {
 }
 
 interface TailOptions extends FilterOptions {
-  minScore?: string;
   interval?: string;
   since?: string;
   exec?: string;
@@ -514,7 +516,6 @@ async function runChild(command: string, mention: Mention): Promise<number> {
 }
 
 async function runTail(options: TailOptions): Promise<void> {
-  const minScore = parseMinScore(options.minScore);
   const intervalSeconds = parseTailInterval(options.interval);
   const since = options.since === undefined ? new Date() : parseWhen(options.since);
   const timezone = systemTimeZone();
@@ -525,7 +526,7 @@ async function runTail(options: TailOptions): Promise<void> {
     print(
       `Tailing new mentions ${
         filters.websiteId === undefined ? 'for every site' : `for site ${formatId(filters.websiteId)}`
-      }${minScore === undefined ? '' : `, score ≥ ${minScore}`}, every ${intervalSeconds}s. Ctrl-C to stop.`,
+      }${filters.minScore === undefined ? '' : `, score ≥ ${filters.minScore}`}, every ${intervalSeconds}s. Ctrl-C to stop.`,
     );
   }
 
@@ -536,11 +537,7 @@ async function runTail(options: TailOptions): Promise<void> {
     key: (mention) => mention.id,
     fetchPage: async (cursor: Cursor) => {
       const response = await listMentions(query);
-      const items = [...response.mentions]
-        .reverse()
-        .filter((mention) =>
-          minScore === undefined ? true : (mention.relevanceScore ?? -1) >= minScore,
-        );
+      const items = [...response.mentions].reverse();
       return { items, cursor };
     },
     onItem: async (mention) => {
@@ -584,6 +581,7 @@ const withFilterOptions = (command: Command): Command =>
     .option('--status <status>', `filter by status, repeatable: ${MENTION_STATUSES.join(', ')}`, collectStatus, [] as MentionStatus[])
     .option('--bucket <bucket>', `filter by score bucket, repeatable: ${RELEVANCE_BUCKETS.join(', ')}`, collectBucket, [] as RelevanceBucket[])
     .option('--include-low', 'include mentions below the site’s minimum score')
+    .option('--min-score <n>', 'only mentions scoring at least this, 0 to 100; unscored ones are left out')
     .option('--keyword <keyword>', 'filter by keyword, repeatable', collect, [] as string[])
     .option('--source <source>', `filter by source, repeatable: ${MENTION_SOURCES.join(', ')}`, collectSource, [] as MentionSource[])
     .option('--from <date>', 'lower bound on ingestion time')
@@ -595,7 +593,7 @@ export function registerMentionCommands(program: Command): void {
     .alias('mentions')
     .description('lead mentions found across Reddit, Hacker News, X and Bluesky');
 
-  withFilterOptions(mention.command('list'))
+  withFilterOptions(mention.command('list', { isDefault: true }))
     .alias('ls')
     .description('list mentions')
     .option('--sort <order>', `${MENTION_SORTS.join(' or ')}`, normalizeSort)
@@ -636,7 +634,6 @@ export function registerMentionCommands(program: Command): void {
 
   withFilterOptions(mention.command('tail'))
     .description('follow new mentions as they arrive')
-    .option('--min-score <n>', 'skip mentions scoring below this')
     .option('--interval <seconds>', `poll every N seconds, floor ${TAIL_INTERVAL_FLOOR_S}`)
     .option('--since <date>', 'start from this time instead of now')
     .option('--exec <command>', 'run this command once per mention, JSON on its stdin')
