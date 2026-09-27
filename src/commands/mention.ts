@@ -155,7 +155,12 @@ export function resolveSite(site?: string): string | undefined {
 }
 
 export function sourceLabel(mention: Mention): string {
-  return mention.subreddit ? `r/${mention.subreddit}` : mention.source;
+  if (!mention.subreddit) return mention.source;
+  if (mention.source === 'REDDIT_POST' || mention.source === 'REDDIT_COMMENT') {
+    return `r/${mention.subreddit}`;
+  }
+  if (mention.source === 'FACEBOOK_GROUP') return `fb group ${mention.subreddit}`;
+  return mention.source;
 }
 
 export function authorLabel(mention: Mention): string {
@@ -364,7 +369,7 @@ function printMention(mention: Mention): void {
     ['id', mention.id],
     ['keyword', mention.keyword || '—'],
     ['author', authorLabel(mention)],
-    ['url', mention.url],
+    ['url', mention.url ?? '—'],
     ...(date === null
       ? []
       : [['posted', formatAbsolute(date, { timezone: systemTimeZone() })] as [string, string]]),
@@ -490,7 +495,7 @@ function execEnv(mention: Mention): Record<string, string> {
   return {
     RR_ID: mention.id,
     RR_SCORE: mention.relevanceScore === null ? '' : String(mention.relevanceScore),
-    RR_URL: mention.url,
+    RR_URL: mention.url ?? '',
     RR_SOURCE: mention.source,
     RR_KEYWORD: mention.keyword ?? '',
     RR_TITLE: mention.title ?? '',

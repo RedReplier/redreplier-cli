@@ -117,9 +117,7 @@ function pendingNote(website: Website): void {
   if (pending === 0) return;
   print('');
   print(
-    `${pending} pending. Price an upgrade: ${PRODUCT.binName} keyword plan --count ${
-      website.keywords.filter((keyword) => keyword.status !== 'DISABLED').length
-    }`,
+    `${pending} pending on this site. Price activating every pending keyword in the workspace: ${PRODUCT.binName} keyword plan`,
   );
 }
 
@@ -264,7 +262,7 @@ async function runActivatePending(): Promise<void> {
       ? 'Nothing left pending. This never charges.'
       : `${pending} still pending, there was no free slot. This never charges.`,
   );
-  if (pending > 0) hint(`price an upgrade: ${PRODUCT.binName} keyword plan --count ${active + pending}`);
+  if (pending > 0) hint(`price an upgrade: ${PRODUCT.binName} keyword plan`);
 }
 
 function printPlan(preview: KeywordBillingPreview): void {

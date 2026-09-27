@@ -229,7 +229,9 @@ async function runCreate(options: CreateOptions): Promise<void> {
     body = { url, keywords, description, ...(options.name ? { name: options.name } : {}) };
   } else if (options.analyze === false) {
     body = { url, keywords, description: '', ...(options.name ? { name: options.name } : {}) };
-    warn('--no-analyze sends an empty description, so nothing this site collects will be scored.');
+    warn(
+      '--no-analyze skips the paid AI analysis. Mentions stay unscored until you add a description with site update.',
+    );
   } else {
     const domain = new URL(url).hostname;
     warn(
@@ -397,7 +399,7 @@ export function registerSiteCommands(program: Command): void {
     .option('--name <name>', 'label for the site')
     .option('-k, --keyword <keyword>', 'keyword to watch, repeatable', collectKeyword, [] as string[])
     .option('--description <text>', 'what the site does; @file reads a file, - reads stdin')
-    .option('--no-analyze', 'send an empty description and skip the paid scrape')
+    .option('--no-analyze', 'skip the paid AI analysis; the site has no description until you add one')
     .action(async (_options: CreateOptions, command: Command) => {
       await runCreate(command.optsWithGlobals() as CreateOptions);
     });

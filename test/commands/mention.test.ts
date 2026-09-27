@@ -211,6 +211,11 @@ describe('row helpers', () => {
     expect(authorLabel(hn)).toBe('pg');
   });
 
+  it('labels a Facebook group mention by its group id, not as a subreddit', () => {
+    const group = mention({ source: 'FACEBOOK_GROUP', subreddit: '123456789', url: null });
+    expect(sourceLabel(group)).toBe('fb group 123456789');
+  });
+
   it('prefers publishedAt, then ingestedAt', () => {
     expect(mentionDate(mention({ publishedAt: null, ingestedAt: null, createdAt: null }))).toBeNull();
     expect(

@@ -1,6 +1,6 @@
 # RedReplier CLI
 
-Watch Reddit, Hacker News, X and Bluesky for your keywords, from your terminal.
+Watch Reddit, Hacker News, X, Bluesky and Facebook for your keywords, from your terminal.
 
 `redreplier` talks to the RedReplier REST API and nothing else. It registers the sites you monitor, manages the keywords they listen for, lists and scores the lead mentions those keywords found, explains why a mention scored what it did, and tails new mentions into any script you want to run on them. Everything prints as a table for humans or as one JSON document for `jq`.
 
@@ -42,7 +42,7 @@ redreplier login
 
 The command opens the token page, reads the token from a hidden prompt, checks the `redreplier_` prefix locally, verifies it with one `GET /websites`, and writes it to `~/.config/redreplier/credentials.json` at mode 0600. Nothing is written if verification fails.
 
-Token creation is gated behind the `api_access` subscription feature. On the free plan the token page answers with an error instead of a token, which is a plan limit and not a CLI fault. Plans are at <https://redreplier.com/billing>.
+Token creation is gated behind the `api_access` subscription feature. On the free plan the token page answers with an error instead of a token, which is a plan limit and not a CLI fault. A token minted on a paid plan stops working if the plan later loses `api_access`: every command then fails with 403 `subscription_required` and exit 9. Plans are at <https://redreplier.com/billing>.
 
 For CI, pipe the token in and skip the prompt:
 
@@ -79,8 +79,11 @@ $ redreplier site create --url https://acme.com -k "reddit monitoring" -k "lead 
 
   ✓ Created ws_4f21…  acme.com
     description  generated (412 chars)
-    keywords     2 active, 0 pending
+    keywords     2 pending
+  ℹ Some keywords are PENDING. Price an upgrade: redreplier keyword plan
 ```
+
+Keywords passed to `site create` are stored `PENDING`. The next `site list` or `keyword activate-pending` promotes the ones that fit the plan's free slots, without charging.
 
 ```
 $ redreplier mention list --bucket HIGH --bucket VERY_HIGH --sort RELEVANCE --limit 5
@@ -174,7 +177,7 @@ Grammar is noun then verb, space-separated. `ls` works wherever `list` does, `rm
 |---|---|---|
 | `site list` | | Every monitored site, its keyword counts and whether it has a description |
 | `site get <id>` | | The site plus its full keyword table with statuses |
-| `site create` | `--url`, `--name`, `-k/--keyword`, `--description`, `--no-analyze` | Without `--description` the server scrapes the URL and spends one AI generation, so it confirms first. `--description @file` reads a file and `-` reads stdin |
+| `site create` | `--url`, `--name`, `-k/--keyword`, `--description`, `--no-analyze` | Without `--description` the server scrapes the URL and spends one AI generation, so it confirms first. `--description @file` reads a file and `-` reads stdin. Keywords land `PENDING` until `site list` or `keyword activate-pending` promotes them. `--no-analyze` sends `description: ""`, which skips the scrape and the AI generation. The site has no description, so its mentions stay unscored until `site update --description` adds one |
 | `site update <id>` | `--name`, `--description` | Existing mentions are not rescored |
 | `site delete <id>` | `--yes` | Deletes the site, its keywords and every mention they produced |
 | `site analyze` | `--url`, `--yes` | Generates a description. Human mode prints it to stdout alone; a pipe is machine mode and gets the JSON envelope, so pipe it with `REDREPLIER_FORCE_TTY=1` or read `.data.description` with `jq` |
@@ -202,10 +205,10 @@ Reading the site list promotes `PENDING` keywords that fit free headroom, which 
 | `keyword add <siteId> <keyword...>` | | Trimmed, lowercased and de-duplicated before sending, so the preview matches what the server stores |
 | `keyword edit <id>` | `--value` | Free and unlimited, and it keeps the paid slot. A case-only change is a no-op |
 | `keyword disable <id>` | | Stops collecting, keeps the mentions, never charges |
-| `keyword enable <id>` | | Lands `PENDING` when no slot is free |
+| `keyword enable <id>` | | Lands `PENDING` when no slot is free. Never charges |
 | `keyword delete <id>` | `--yes` | Deletes every mention the keyword produced. Type DELETE to confirm |
 | `keyword activate-pending` | | Promotes pending keywords into free slots. Overflow stays pending |
-| `keyword plan` | `--count` | `--count` is an account-wide total of active keywords, not an increment |
+| `keyword plan` | `--count` | Read-only price preview. Without `--count` it prices activating every pending keyword in the workspace. `--count` is an account-wide total of active keywords, not an increment. Changing the plan happens in the web app |
 | `keyword usage` | | Keyword edits are unlimited on every current plan, and the output says that rather than drawing a meter |
 
 `keyword` also answers to `keywords` and `kw`.
@@ -261,7 +264,7 @@ $ redreplier alerts get
 | `logout` | `--profile`, `--all` | |
 | `whoami` | | Prints which source each of the token and the API URL came from |
 | `config list \| get \| set \| unset \| path` | | Reads and writes `config.json` |
-| `open [what] [id]` | | `dashboard`, `mentions`, `mention <id>`, `sites`, `site <id>`, `keywords`, `tokens`, `billing` |
+| `open [what]` | | `dashboard`, `keywords`, `leads` (also `mentions`), `alerts`, `subreddits`, `seo`, `tokens`, `billing`, `settings`, `workspaces` |
 | `doctor` | `--json` | Node version, files, permissions, token, API reachability, rate limit |
 | `completion <shell>` | | `bash`, `zsh`, `fish`, `powershell` |
 | `mcp` | `--client`, `--local`, `--install` | Prints or names the file for the MCP client config |
@@ -296,7 +299,7 @@ Accepted at any position.
 | `--no-input` | auto | Never prompt; fail with exit 2 instead |
 | `--lang <code>` | unset | `en`, `fr`, `de`, `es`, `pt` |
 | `--full-ids` | false | Print identifiers in full instead of truncating |
-| `-V, --version` | | Prints `redreplier/1.3.2 node-v22.14.0 darwin-arm64` |
+| `-V, --version` | | Prints `redreplier/0.2.0 node-v22.14.0 darwin-arm64` |
 | `-h, --help` | | `--help-all` adds the experimental commands |
 
 `--no-input` is implied when stdin is not a TTY.
@@ -340,14 +343,14 @@ Add `--json` to a list command and the available field names are printed to stde
 | 0 | Success |
 | 1 | Generic failure, including 5xx |
 | 2 | Usage error: bad flag, missing argument, unknown enum, prompt needed under `--no-input` |
-| 3 | Auth failure: 401, missing or malformed token |
+| 3 | Auth failure: 401, missing or malformed token, or `token_issuer_lost_access` when the member who created the key has left the workspace or was deactivated |
 | 4 | Not found: 404, or a mention that is not visible in this workspace |
 | 5 | Validation or other 400 |
 | 6 | Conflict: 409 |
 | 7 | Rate limited: 429 after retries |
 | 8 | Network failure or timeout |
 | 9 | Quota or plan limit: 402, no AI generations left, 403 `subscription_required` |
-| 10 | Permission denied: 403, the token is valid but not allowed to do this |
+| 10 | Permission denied: 403, the token is valid but not allowed to do this, including `workspace_access_denied` for a workspace the token does not belong to |
 | 130 | Interrupted with Ctrl-C |
 
 Exit 3 means get a working token. Exit 10 means the token works and someone with more access has to act; retrying from this machine changes nothing.
@@ -380,7 +383,7 @@ Base URL resolution, highest first: `--api-url`, `REDREPLIER_API_URL`, the profi
 | `defaultSite` | Default for `--site` |
 | `language` | Default `x-language` header |
 | `updateCheck` | Set false to turn off the daily version check |
-| `workspaceId` | The workspace this profile talks to |
+| `workspaceId` | Stored, but not yet sent as the `X-Workspace-Id` header. An API token belongs to one workspace, so use one profile per workspace |
 
 ```bash
 redreplier config set defaultSite ws_4f21

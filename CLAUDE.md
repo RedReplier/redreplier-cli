@@ -1,6 +1,6 @@
 # RedReplier CLI
 
-Command line interface for RedReplier, which watches Reddit, Hacker News, X and Bluesky for keywords and surfaces lead mentions. Bins: `redreplier`, `rr`.
+Command line interface for RedReplier, which watches Reddit, Hacker News, X, Bluesky and Facebook for keywords and surfaces lead mentions. Bins: `redreplier`, `rr`.
 
 ## Setup
 

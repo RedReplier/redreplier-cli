@@ -140,7 +140,7 @@ export interface Mention {
   keyword: string | null;
   title: string | null;
   contentText: string | null;
-  url: string;
+  url: string | null;
   author: string | null;
   subreddit: string | null;
   status: MentionStatus;

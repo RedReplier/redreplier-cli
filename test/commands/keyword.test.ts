@@ -176,7 +176,8 @@ describe('keyword add', () => {
 
     expect(stdout).toContain('acme.com now has 2 keywords');
     expect(stdout).toContain('no free slot on this plan');
-    expect(stdout).toContain('1 pending. Price an upgrade: redreplier keyword plan');
+    expect(stdout).toContain('1 pending on this site. Price activating every pending keyword in the workspace: redreplier keyword plan');
+    expect(stdout).not.toContain('--count');
   });
 });
 
