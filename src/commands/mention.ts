@@ -24,6 +24,7 @@ import {
   formatId,
   formatRelative,
   hint,
+  isApiError,
   isMachine,
   isQuiet,
   notFoundError,
@@ -404,20 +405,26 @@ function printMention(mention: Mention): void {
   print(`approve: ${PRODUCT.binName} mention status ${mention.id} APPROVED`);
 }
 
+async function explainOrNotFound(id: string, notFoundHint: string): Promise<Mention> {
+  try {
+    return await withProgress('Explaining mention…', () => explainMention(id));
+  } catch (error) {
+    if (isApiError(error) && error.status === 404) {
+      throw notFoundError(`Mention ${id} not found in this workspace`, notFoundHint);
+    }
+    throw error;
+  }
+}
+
 async function runShow(id: string, options: FilterOptions & { explain?: boolean }): Promise<void> {
   const mention = options.explain
-    ? await withProgress('Explaining mention…', () => explainMention(id))
+    ? await explainOrNotFound(id, 'drop --explain to page through /mentions instead')
     : await withProgress('Searching mentions…', () =>
         findMention(id, buildFilterQuery({ ...options, site: resolveSite(options.site) })),
       );
 
   if (!mention) {
-    throw notFoundError(
-      'Mention not found in this workspace',
-      options.explain
-        ? `drop --explain to page through /mentions instead`
-        : `${PRODUCT.binName} mention list --limit 20`,
-    );
+    throw notFoundError('Mention not found in this workspace', `${PRODUCT.binName} mention list --limit 20`);
   }
 
   if (isMachine()) {
@@ -446,14 +453,7 @@ async function runStatus(id: string, rawStatus: string): Promise<void> {
 async function runExplain(id: string): Promise<void> {
   hint('The first call runs generation and can take up to two minutes. Later calls are instant reads.');
 
-  const mention = await withProgress('Explaining mention…', () => explainMention(id));
-
-  if (!mention) {
-    throw notFoundError(
-      'Mention not found in this workspace',
-      `${PRODUCT.binName} mention list --limit 20`,
-    );
-  }
+  const mention = await explainOrNotFound(id, `${PRODUCT.binName} mention list --limit 20`);
 
   if (isMachine()) {
     printResult('mention.explain', mention);

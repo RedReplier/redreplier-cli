@@ -83,6 +83,7 @@ const site = (id: string, domain: string, statuses: KeywordStatus[] = []): Websi
   url: `https://${domain}`,
   name: null,
   description: 'what it does',
+  ignoredKeywords: [],
   createdAt: null,
   updatedAt: null,
   keywords: statuses.map((status, index) => ({

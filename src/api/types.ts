@@ -39,6 +39,10 @@ export const MAX_KEYWORD_LENGTH = 255;
 
 export const MAX_WEBSITE_DESCRIPTION_LENGTH = 5000;
 
+export const MAX_IGNORED_KEYWORDS = 100;
+
+export const MAX_IGNORED_KEYWORD_LENGTH = 255;
+
 export const MENTION_LIMIT_MIN = 1;
 
 export const MENTION_LIMIT_MAX = 500;
@@ -73,6 +77,7 @@ export interface Website {
   url: string;
   name: string | null;
   description: string | null;
+  ignoredKeywords: string[];
   createdAt: string | null;
   updatedAt: string | null;
   keywords: Keyword[];
@@ -92,6 +97,7 @@ export interface CreateWebsiteRequest {
 export interface UpdateWebsiteRequest {
   name?: string;
   description?: string;
+  ignoredKeywords?: string[];
 }
 
 export interface AnalyzeWebsiteRequest {

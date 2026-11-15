@@ -70,6 +70,7 @@ const site = (keywords: Keyword[]): Website => ({
   url: 'https://acme.com',
   name: 'Acme',
   description: 'what it does',
+  ignoredKeywords: [],
   createdAt: null,
   updatedAt: null,
   keywords,

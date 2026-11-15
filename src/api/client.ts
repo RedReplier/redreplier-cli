@@ -163,8 +163,8 @@ export const updateMentionStatus = (
     body: updateMentionStatusRequest,
   });
 
-export const explainMention = (mentionId: string): Promise<Mention | null> =>
-  request<Mention | null>({
+export const explainMention = (mentionId: string): Promise<Mention> =>
+  request<Mention>({
     method: 'POST',
     path: `/mentions/${segment(mentionId)}/explain`,
     idempotent: true,

@@ -59,6 +59,18 @@ describe('endpoint mapping', () => {
       },
     ],
     [
+      'updateWebsite with an ignore list',
+      () =>
+        client.updateWebsite('4f21a0c8-1d3e-4b77-9f0a-6c2b81e5d930', {
+          ignoredKeywords: ['hiring', 'job post'],
+        }),
+      {
+        method: 'PATCH',
+        path: '/websites/4f21a0c8-1d3e-4b77-9f0a-6c2b81e5d930',
+        body: { ignoredKeywords: ['hiring', 'job post'] },
+      },
+    ],
+    [
       'deleteWebsite',
       () => client.deleteWebsite('9b031c7a-52e4-4a11-8d6f-30c9a7b41e28'),
       {
@@ -298,13 +310,5 @@ describe('return value', () => {
     request.mockResolvedValueOnce(websites);
 
     await expect(client.listWebsites()).resolves.toBe(websites);
-  });
-
-  it('passes a null explain response through instead of throwing', async () => {
-    request.mockResolvedValueOnce(null);
-
-    await expect(
-      client.explainMention('8f2c1b0e-4d73-4c2f-9a18-5b6e0d3f7c41'),
-    ).resolves.toBeNull();
   });
 });

@@ -83,7 +83,7 @@ $ redreplier site create --url https://acme.com -k "reddit monitoring" -k "lead 
   ℹ Some keywords are PENDING. Price an upgrade: redreplier keyword plan
 ```
 
-Keywords passed to `site create` are stored `PENDING`. The next `site list` or `keyword activate-pending` promotes the ones that fit the plan's free slots, without charging.
+Keywords passed to `site create` are stored `PENDING`. `keyword activate-pending`, a later `keyword add`, or a slot freed by disabling or deleting a keyword promotes the ones that fit the plan's free slots, without charging.
 
 ```
 $ redreplier mention list --bucket HIGH --bucket VERY_HIGH --sort RELEVANCE --limit 5
@@ -175,10 +175,10 @@ Grammar is noun then verb, space-separated. `ls` works wherever `list` does, `rm
 
 | Command | Key flags | Notes |
 |---|---|---|
-| `site list` | | Every monitored site, its keyword counts and whether it has a description |
-| `site get <id>` | | The site plus its full keyword table with statuses |
-| `site create` | `--url`, `--name`, `-k/--keyword`, `--description`, `--no-analyze` | Without `--description` the server scrapes the URL and spends one AI generation, so it confirms first. `--description @file` reads a file and `-` reads stdin. Keywords land `PENDING` until `site list` or `keyword activate-pending` promotes them. `--no-analyze` sends `description: ""`, which skips the scrape and the AI generation. The site has no description, so its mentions stay unscored until `site update --description` adds one |
-| `site update <id>` | `--name`, `--description` | Existing mentions are not rescored |
+| `site list` | | Every monitored site, its keyword counts, whether it has a description and how many phrases it ignores. Listing only reads |
+| `site get <id>` | | The site, its ignore list and its full keyword table with statuses |
+| `site create` | `--url`, `--name`, `-k/--keyword`, `--description`, `--no-analyze` | Without `--description` the server scrapes the URL and spends one AI generation, so it confirms first. `--description @file` reads a file and `-` reads stdin. Keywords land `PENDING` until `keyword activate-pending` or a freed slot promotes them. `--no-analyze` sends `description: ""`, which skips the scrape and the AI generation. The site has no description, so its mentions stay unscored until `site update --description` adds one |
+| `site update <id>` | `--name`, `--description`, `--ignore`, `--clear-ignore` | Existing mentions are not rescored. `--ignore` is repeatable, one word or phrase per flag (up to 100, 255 characters each), and replaces the whole ignore list: a mention whose title or text contains one, ignoring case, leaves every mention list and count, and new matches are hidden as they arrive. Pass every phrase you want to keep. `--clear-ignore` empties the list and brings the hidden mentions back |
 | `site delete <id>` | `--yes` | Deletes the site, its keywords and every mention they produced |
 | `site analyze` | `--url`, `--yes` | Generates a description. Human mode prints it to stdout alone; a pipe is machine mode and gets the JSON envelope, so pipe it with `REDREPLIER_FORCE_TTY=1` or read `.data.description` with `jq` |
 
@@ -186,17 +186,24 @@ A site with no description has its mentions left unscored, and `site list` says 
 
 ```
 $ redreplier site list
-  ID              DOMAIN            NAME            KEYWORDS              DESCRIPTION
-  ws_4f21…        acme.com          Acme            12 active, 3 pending  yes
-  ws_9b03…        acmedocs.io       Acme Docs       4 active              missing
+  ID              DOMAIN            NAME            KEYWORDS              DESCRIPTION  IGNORED
+  ws_4f21…        acme.com          Acme            12 active, 3 pending  yes          2
+  ws_9b03…        acmedocs.io       Acme Docs       4 active              missing      0
 
   ⚠ acmedocs.io has no description. Its mentions are not scored.
     fix: redreplier site analyze --url https://acmedocs.io
-  Listing sites activates any PENDING keyword that fits your plan's free headroom.
-  3 keywords still PENDING, there was no free slot. Price an upgrade: redreplier keyword plan
+  3 keywords PENDING. Fill free slots: redreplier keyword activate-pending, or price an upgrade: redreplier keyword plan
 ```
 
-Reading the site list promotes `PENDING` keywords that fit free headroom, which is a server-side effect of the endpoint. The response carries no before-and-after, so the CLI states the rule and how many keywords are still `PENDING` rather than claiming a number was just promoted.
+Listing sites changes nothing. A `PENDING` keyword moves to `ACTIVE` when `keyword activate-pending` runs, when a later `keyword add` finds free headroom, or when disabling or deleting a keyword, or deleting a site, frees a slot.
+
+```
+$ redreplier site update ws_4f21… --ignore hiring --ignore "job post"
+  ✓ Updated ws_4f21…  acme.com
+    name         Acme
+    description  412 characters
+    ignored      hiring, job post
+```
 
 ### keyword
 
@@ -221,7 +228,7 @@ Reading the site list promotes `PENDING` keywords that fit free headroom, which 
 | `mention count` | The same filters | `{"total": N}` in machine mode, the API payload unchanged |
 | `mention show <id>` | `--explain`, plus the filters | Pages the list to find the id, or fetches it through `explain` |
 | `mention status <id> <status>` | | `NEW`, `APPROVED` or `REJECTED`, case-insensitive. Reversible, so no confirmation |
-| `mention explain <id>` | | The first call generates and is slow, later calls are instant reads |
+| `mention explain <id>` | | The first call generates and is slow, later calls are instant reads. An id the workspace does not have exits 4 with a not-found message |
 | `mention tail` | `--interval`, `--since`, `--exec`, `--approve-on-exec-success`, plus the filters | `--interval` has a floor of 30 s |
 
 Enums, in full:

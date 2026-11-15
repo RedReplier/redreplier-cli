@@ -21,7 +21,7 @@ vi.mock('../../src/core/index.js', async (importOriginal) => {
 });
 
 const client = await import('../../src/api/client.js');
-const { initOutput } = await import('../../src/core/index.js');
+const { ApiError, initOutput } = await import('../../src/core/index.js');
 const {
   authorLabel,
   buildFilterQuery,
@@ -412,10 +412,22 @@ describe('mention show', () => {
 });
 
 describe('mention explain', () => {
-  it('turns a null body into exit 4 instead of crashing', async () => {
-    vi.mocked(client.explainMention).mockResolvedValue(null);
+  it('turns a 404 into a not-found error that names the mention', async () => {
+    vi.mocked(client.explainMention).mockRejectedValue(
+      new ApiError({ status: 404, body: { statusCode: 404, message: 'Mention not found' } }),
+    );
 
-    await expect(run(['mention', 'explain', 'ghost'])).rejects.toMatchObject({ exitCode: 4 });
+    await expect(run(['mention', 'explain', 'ghost'])).rejects.toMatchObject({
+      exitCode: 4,
+      message: 'Mention ghost not found in this workspace',
+    });
+  });
+
+  it('passes other API errors through unchanged', async () => {
+    const error = new ApiError({ status: 500, body: { message: 'boom' } });
+    vi.mocked(client.explainMention).mockRejectedValue(error);
+
+    await expect(run(['mention', 'explain', 'ghost'])).rejects.toBe(error);
   });
 
   it('warns that the first call generates before it prints', async () => {

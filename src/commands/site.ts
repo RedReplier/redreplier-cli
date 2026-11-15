@@ -13,6 +13,8 @@ import {
   updateWebsite,
 } from '../api/client.js';
 import {
+  MAX_IGNORED_KEYWORD_LENGTH,
+  MAX_IGNORED_KEYWORDS,
   MAX_WEBSITE_DESCRIPTION_LENGTH,
   MENTION_STATUSES,
   type Keyword,
@@ -84,6 +86,37 @@ export function assertWebsiteUrl(value: string, flag = '--url'): string {
   return text;
 }
 
+export function describeIgnored(website: Website): string {
+  return website.ignoredKeywords.length === 0 ? 'none' : website.ignoredKeywords.join(', ');
+}
+
+export const collectIgnored = (value: string, previous: string[] = []): string[] => {
+  const text = value.trim();
+  if (text === '') throw usageError('--ignore needs a word or phrase, got an empty value');
+  if (text.length > MAX_IGNORED_KEYWORD_LENGTH) {
+    throw usageError(
+      `--ignore "${text}" is ${text.length} characters, the limit is ${MAX_IGNORED_KEYWORD_LENGTH}`,
+    );
+  }
+  return [...previous, text];
+};
+
+export function resolveIgnoredKeywords(
+  ignore: readonly string[],
+  clearIgnore: boolean,
+): string[] | undefined {
+  if (clearIgnore && ignore.length > 0) {
+    throw usageError('Pass --ignore or --clear-ignore, not both.');
+  }
+  if (clearIgnore) return [];
+  if (ignore.length === 0) return undefined;
+  const unique = [...new Set(ignore.map((value) => value.toLowerCase()))];
+  if (unique.length > MAX_IGNORED_KEYWORDS) {
+    throw usageError(`--ignore was given ${unique.length} times, the limit is ${MAX_IGNORED_KEYWORDS}`);
+  }
+  return unique;
+}
+
 async function readStdin(): Promise<string> {
   const chunks: Buffer[] = [];
   for await (const chunk of process.stdin) chunks.push(chunk as Buffer);
@@ -118,6 +151,7 @@ const LIST_COLUMNS: Column<Website>[] = [
   { header: 'NAME', value: (website) => website.name || '—' },
   { header: 'KEYWORDS', value: (website) => describeKeywords(website) },
   { header: 'DESCRIPTION', value: (website) => (website.description ? 'yes' : 'missing') },
+  { header: 'IGNORED', value: (website) => String(website.ignoredKeywords.length) },
 ];
 
 const KEYWORD_COLUMNS: Column<Keyword>[] = [
@@ -165,10 +199,9 @@ async function runList(): Promise<void> {
   }
 
   const pending = websites.reduce((total, website) => total + keywordCounts(website).PENDING, 0);
-  hint('Listing sites activates any PENDING keyword that fits your plan’s free headroom.');
   if (pending > 0) {
     hint(
-      `${pending} keyword${pending === 1 ? '' : 's'} still PENDING, there was no free slot. Price an upgrade: ${PRODUCT.binName} keyword plan`,
+      `${pending} keyword${pending === 1 ? '' : 's'} PENDING. Fill free slots: ${PRODUCT.binName} keyword activate-pending, or price an upgrade: ${PRODUCT.binName} keyword plan`,
     );
   }
 }
@@ -191,6 +224,7 @@ async function runGet(id: string): Promise<void> {
       website.description ? `${website.description.length} characters` : 'missing, mentions are not scored',
     ],
     ['keywords', describeKeywords(website)],
+    ['ignored', describeIgnored(website)],
     [
       'created',
       website.createdAt ? formatAbsolute(new Date(website.createdAt), { timezone: 'UTC' }) : '—',
@@ -281,15 +315,19 @@ async function runCreate(options: CreateOptions): Promise<void> {
 interface UpdateOptions {
   name?: string;
   description?: string;
+  ignore: string[];
+  clearIgnore?: boolean;
 }
 
 async function runUpdate(id: string, options: UpdateOptions): Promise<void> {
   const body: Parameters<typeof updateWebsite>[1] = {};
   if (options.name !== undefined) body.name = options.name;
   if (options.description !== undefined) body.description = await readDescription(options.description);
+  const ignoredKeywords = resolveIgnoredKeywords(options.ignore, options.clearIgnore === true);
+  if (ignoredKeywords !== undefined) body.ignoredKeywords = ignoredKeywords;
 
   if (Object.keys(body).length === 0) {
-    throw usageError('Nothing to update.', 'Pass --name, --description, or both');
+    throw usageError('Nothing to update.', 'Pass --name, --description, --ignore or --clear-ignore');
   }
 
   const website = await withProgress('Updating site…', () => updateWebsite(id, body));
@@ -303,8 +341,11 @@ async function runUpdate(id: string, options: UpdateOptions): Promise<void> {
   printKeyValues([
     ['name', website.name || '—'],
     ['description', website.description ? `${website.description.length} characters` : 'missing'],
+    ['ignored', describeIgnored(website)],
   ]);
-  print('Existing mentions are not rescored.');
+  if (body.name !== undefined || body.description !== undefined) {
+    print('Existing mentions are not rescored.');
+  }
 }
 
 async function runDelete(id: string, options: { yes?: boolean }): Promise<void> {
@@ -406,9 +447,16 @@ export function registerSiteCommands(program: Command): void {
 
   site
     .command('update <id>')
-    .description('rename a site or replace its description')
+    .description('rename a site, replace its description or set its ignore list')
     .option('--name <name>', 'new label for the site')
     .option('--description <text>', 'new description; @file reads a file, - reads stdin')
+    .option(
+      '--ignore <phrase>',
+      'word or phrase whose mentions to hide, repeatable; replaces the whole ignore list',
+      collectIgnored,
+      [] as string[],
+    )
+    .option('--clear-ignore', 'empty the ignore list and bring hidden mentions back')
     .action(async (id: string, options: UpdateOptions) => {
       await runUpdate(id, options);
     });
