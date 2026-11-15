@@ -1,0 +1,16 @@
+package-lock.json
+  h_d76ceef5a88fa0 3,9
+package.json
+  h_d76ceef5a88fa0 3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e89d7f8a3df38531d1f4301c04bc79b102e92f87",
+  "prompts": {},
+  "humans": {
+    "h_d76ceef5a88fa0": {
+      "author": "Taras Shynkarenko <taras.shinkarenko@gmail.com>"
+    }
+  }
+}
